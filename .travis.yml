@@ -6,4 +6,4 @@ before_script:
   - sudo $(type -P npm) install grunt
   - sudo $(type -P npm) install grunt-contrib-qunit
 
-script: grunt test --verbose --force
+script: grunt test --verbose

@@ -1,5 +1,5 @@
 # JSON-parser
-![](https://travis-ci.org/darkbluever/JSON-parser.svg?branch=dev travis-ci)
+[![Build Status](https://travis-ci.org/darkbluever/JSON-parser.svg?branch=dev)](https://travis-ci.org/darkbluever/JSON-parser)
 
 ## Description
 JSON parser for javascript

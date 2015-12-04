@@ -3,7 +3,7 @@ language: node_js
 before_script:
   - sudo $(type -P npm) install -g grunt-cli
   - grunt --version
-  - sudo npm install grunt
-  - sudo npm install grunt-contrib-qunit
+  - sudo $(type -P npm) install grunt
+  - sudo $(type -P npm) install grunt-contrib-qunit
 
 script: grunt test --verbose --force

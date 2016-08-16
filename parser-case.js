@@ -26,8 +26,14 @@ QUnit.test('charReader', function() {
     QUnit.strictEqual(ins1.peek(), 'a');
     QUnit.strictEqual(ins1.peek(), 'a');
     QUnit.strictEqual(ins1.nextN(3), 'a":');
+    QUnit.strictEqual(ins1.hasMore(), true);
+    QUnit.strictEqual(ins1.next(), '1');
 });
 
+QUnit.test('tokenReader', function() {
+    var str = '{"a":1,"b":FALSE}';
+
+});
 
 // QUnit.test('parseNum', function(){
 //     QUnit.strictEqual(JsonUtil.parseNum('0'), 0);

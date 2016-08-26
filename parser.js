@@ -310,7 +310,7 @@ var JsonUtil = (function(){
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected string");
+                    throw new SyntaxError("Unexpected char '\"'");
                 case TOKEN_SEP_COLON:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SEP_COLON)) {
                         fsm.setStatus(fsm.STATUS_EXPECT_OBJECT_VALUE | fsm.STATUS_EXPECT_BEGIN_OBJECT | fsm.STATUS_EXPECT_BEGIN_ARRAY);

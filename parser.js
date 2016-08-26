@@ -186,7 +186,7 @@ var JsonUtil = (function(){
                 fsm.curStatus = fsm.STATUS_EXPECT_BEGIN_OBJECT | fsm.STATUS_EXPECT_BEGIN_ARRAY | fsm.STATUS_EXPECT_SINGLE_VALUE;
             };
 
-            return 
+            return fsm;
         }
     };
 
@@ -211,7 +211,7 @@ var JsonUtil = (function(){
                         scopeStack.push(TOKEN_BEGIN_OBJECT);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char '" + TOKEN_BEGIN_OBJECT + "'");
+                    throw new SyntaxError("Unexpected char '{'");
                 case TOKEN_BEGIN_ARRAY:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_BEGIN_ARRAY)) {
                         var tmpArray = [];
@@ -220,7 +220,7 @@ var JsonUtil = (function(){
                         scopeStack.push(TOKEN_BEGIN_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char '" + TOKEN_BEGIN_ARRAY + "'");
+                    throw new SyntaxError("Unexpected char '['");
                 case TOKEN_NULL:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SINGLE_VALUE)) {
                         var val = tokenReader.readNull();
@@ -310,13 +310,13 @@ var JsonUtil = (function(){
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char '" + TOKEN_STRING + "'");
+                    throw new SyntaxError("Unexpected string");
                 case TOKEN_SEP_COLON:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SEP_COLON)) {
                         fsm.setStatus(fsm.STATUS_EXPECT_OBJECT_VALUE | fsm.STATUS_EXPECT_BEGIN_OBJECT | fsm.STATUS_EXPECT_BEGIN_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char '" + TOKEN_SEP_COLON + "'");
+                    throw new SyntaxError("Unexpected char ':'");
                 case TOKEN_SEP_COMMA:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SEP_COMMA)) {
                         if (fsm.hasStatus(fsm.STATUS_EXPECT_END_OBJECT)) {
@@ -328,7 +328,7 @@ var JsonUtil = (function(){
                             continue;
                         }
                     }
-                    throw new SyntaxError("Unexpected char '" + TOKEN_SEP_COMMA + "'");
+                    throw new SyntaxError("Unexpected char ','");
                 case TOKEN_END_OBJECT:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_END_OBJECT)) {
                         if (scopeStack.length == 0) {
@@ -358,12 +358,37 @@ var JsonUtil = (function(){
                         }
                         throw new SyntaxError("Unexpected char '}'");
                     }
-                    throw new SyntaxError("Unexpected char '" + TOKEN_END_OBJECT + "'");
+                    throw new SyntaxError("Unexpected char '}'");
                 case TOKEN_END_ARRAY:
                     if (fsm.hashStatus(fsm.STATUS_EXPECT_END_ARRAY)) {
-                    
+                        if (scopeStack.length == 0) {
+                            var tmpArr = arrayStack.pop();
+                            stack.push(tmpArr);
+                            fsm.setStatus(fsm.STATUS_EXPECT_END_DOCUMENT);
+                            continue;
+                        }
+
+                        if (scopeStack.peek() == TOKEN_BEGIN_ARRAY) {
+                            scopeStack.pop();
+                        } else {
+                            throw new SyntaxError("Unexpected char ']', scope not match");
+                        }
+
+                        var lastScope = scopeStack.peek();
+                        if (lastScope == TOKEN_BEGIN_ARRAY) {
+                            var tmpArr = arrayStack.pop();
+                            arrayStack.peek().push(tmpArr);
+                            fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
+                        }
+                        if (lastScope == TOKEN_BEGIN_OBJECT) {
+                            var tmpArr = arrayStack.pop();
+                            var key = statck.pop();
+                            objStack.peek().key = tmpArr;
+                            fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
+                        }
+                        throw new SyntaxError("Unexpected char ']'");
                     }
-                    throw new SyntaxError("Unexpected char '" + TOKEN_END_ARRAY + "'");
+                    throw new SyntaxError("Unexpected char ']'");
                 case TOKEN_END_DOCUMENT:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_END_DOCUMENT)) {
                         var val = stack.pop();

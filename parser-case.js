@@ -1,8 +1,21 @@
 module("JsonUtil");
-// QUnit.test('parse', function(){
-//     var result = JsonUtil.parse("abc");
-//     QUnit.equal(result, "cba", "reverse");
-// });
+
+QUnit.test('simpleStack', function() {
+    var stack = JsonUtil.simpleStack.createNew();
+    
+    var testObj = {};
+    var testArr = [];
+    stack.push(testObj);
+    stack.push(testArr);
+
+    stack.peekN(2).a = 'b';
+    stack.peek().push('b');
+
+    var arr = stack.pop();
+    var obj = stack.pop();
+    QUnit.strictEqual(arr[0], 'b');
+    QUnit.strictEqual(obj.a, 'b');
+});
 
 QUnit.test('charReader', function() {
     var str = '{"a":1,"b":FALSE}';
@@ -30,10 +43,10 @@ QUnit.test('charReader', function() {
     QUnit.strictEqual(ins1.next(), '1');
 });
 
-QUnit.test('tokenReader', function() {
-    var str = '{"a":1,"b":FALSE}';
-
-});
+//QUnit.test('tokenReader', function() {
+//    var str = '{"a":1,"b":FALSE}';
+//
+//});
 
 // QUnit.test('parseNum', function(){
 //     QUnit.strictEqual(JsonUtil.parseNum('0'), 0);

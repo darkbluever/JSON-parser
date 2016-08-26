@@ -12,6 +12,38 @@ var JsonUtil = (function(){
     var TOKEN_NUMBER = 10;
     var TOKEN_END_DOCUMENT = 11;
 
+    var simpleStack = {
+        createNew : function() {
+            var stack = {};
+            stack.arr = [];
+            stack.peek = function () {
+                return stack.arr[stack.arr.length - 1];
+            };
+
+            stack.peekN = function (num) {
+                if (num > stack.arr.length) {
+                    return null;
+                }
+                return stack.arr[stack.arr.length - num];
+            };
+
+            stack.push = function (obj) {
+                stack.arr.push(obj);
+                return stack.arr.length;
+            };
+
+            stack.pop = function () {
+                return stack.arr.pop();
+            };
+
+            stack.len = function () {
+                return stack.arr.length;
+            };
+
+            return stack;
+        }
+    };
+
     var charReader = {
         createNew : function (str) {
             var reader = {};
@@ -122,44 +154,50 @@ var JsonUtil = (function(){
         }
     };
 
-    var fsm = {
+    var FSM = {
+        createNew : function() {
+            var fsm = {};
+            fsm.status_expect_begin_object = 0x0001;
+            fsm.status_expect_object_key = 0x0002;
+            fsm.status_expect_object_value = 0x0004;
+            fsm.status_expect_end_object = 0x0008;
 
-        var STATUS_EXPECT_BEGIN_OBJECT = 0x0001;
-        var STATUS_EXPECT_OBJECT_KEY = 0x0002;
-        var STATUS_EXPECT_OBJECT_VALUE = 0x0004;
-        var STATUS_EXPECT_END_OBJECT = 0x0008;
+            fsm.STATUS_EXPECT_BEGIN_ARRAY = 0x0010;
+            fsm.STATUS_EXPECT_ARRAY_VALUE = 0x0020;
+            fsm.STATUS_EXPECT_END_ARRAY = 0x0040;
 
-        var STATUS_EXPECT_BEGIN_ARRAY = 0x0010;
-        var STATUS_EXPECT_ARRAY_VALUE = 0x0020;
-        var STATUS_EXPECT_END_ARRAY = 0x0040;
+            fsm.STATUS_EXPECT_SINGLE_VALUE = 0x0080;
+            fsm.STATUS_EXPECT_SEP_COLON = 0x0100;
+            fsm.STATUS_EXPECT_SEP_COMMA = 0x0200;
 
-        var STATUS_EXPECT_SINGLE_VALUE = 0x0080;
-        var STATUS_EXPECT_SEP_COLON = 0x0100;
-        var STATUS_EXPECT_SEP_COMMA = 0x0200;
+            fsm.STATUS_EXPECT_END_DOCUMENT = 0x0400;
 
-        var STATUS_EXPECT_END_DOCUMENT = 0x0400;
+            fsm.curStatus;
 
-        var curStatus;
+            fsm.hasStatus = function (targetStatus) {
+                return fsm.curStatus & targetStatus;
+            };
 
-        var hasStatus(targetStatus) {
-            return curStatus & targetStatus;
-        };
+            fsm.setStatus = function (targetStatus) {
+                fsm.curStatus = targetStatus;
+            };
 
-        var setStatus(targetStatus) {
-            curStatus = targetStatus;
-        };
+            fsm.initStatus = function() {
+                fsm.curStatus = fsm.STATUS_EXPECT_BEGIN_OBJECT | fsm.STATUS_EXPECT_BEGIN_ARRAY | fsm.STATUS_EXPECT_SINGLE_VALUE;
+            };
 
-        var initStatus() {
-            curStatus = STATUS_EXPECT_BEGIN_OBJECT | STATUS_EXPECT_BEGIN_ARRAY | STATUS_EXPECT_SINGLE_VALUE;
+            return 
         }
     };
 
 
     var parse = function(str) {
         var tokenReader = tokenReader.createNew(str);
-        var stack = [];
-        var arrayStack = [];
-        var objStack = [];
+        var fsm = FSM.createNew();
+        var stack = simpleStack.createNew();
+        var arrayStack = simpleStack.createNew();
+        var objStack = simpleStack.createNew();
+        var scopeStack = simpleStack.createNew();
 
         for(;;) {
             fsm.initStatus();
@@ -170,6 +208,7 @@ var JsonUtil = (function(){
                         var tmpObj = {};
                         objStack.push(tmpObj);
                         fsm.setStatus(fsm.STATUS_EXPECT_OBJECT_KEY | fsm.STATUS_EXPECT_BEGIN_OBJECT | fsm.STATUS_EXPECT_END_OBJECT);
+                        scopeStack.push(TOKEN_BEGIN_OBJECT);
                         continue;
                     }
                     throw new SyntaxError("Unexpected char '" + TOKEN_BEGIN_OBJECT + "'");
@@ -178,6 +217,7 @@ var JsonUtil = (function(){
                         var tmpArray = [];
                         arrayStack.push(tmpArray);
                         fsm.setStatus(fsm.STATUS_EXPECT_ARRAY_VALUE | fsm.STATUS_EXPECT_BEGIN_ARRAY | fsm.STATUS_EXPECT_END_ARRAY | fsm.STATUS_EXPECT_BEGIN_OBJECT);
+                        scopeStack.push(TOKEN_BEGIN_ARRAY);
                         continue;
                     }
                     throw new SyntaxError("Unexpected char '" + TOKEN_BEGIN_ARRAY + "'");
@@ -190,18 +230,14 @@ var JsonUtil = (function(){
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_OBJECT_VALUE)) {
                         var val = tokenReader.readNull();
-                        var tmpObj = objStack.pop();
                         var key = stack.pop();
-                        tmpObj.key = val;
-                        objStack.put(tmpObj);
+                        objStack.peek().key = val;
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
                         continue;
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_ARRAY_VALUE)) {
                         var val = tokenReader.readNull();
-                        var tmpArray = arrayStack.pop();
-                        tmpArray.push(val);
-                        arrayStack.put(tmpArray);
+                        arrayStack.peek().push(val);
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
@@ -215,18 +251,14 @@ var JsonUtil = (function(){
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_OBJECT_VALUE)) {
                         var val = tokenReader.readBoolean();
-                        var tmpObj = objStack.pop();
                         var key = stack.pop();
-                        tmpObj.key = val;
-                        objStack.put(tmpObj);
+                        objStack.peek().key = val;
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
                         continue;
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_ARRAY_VALUE)) {
                         var val = tokenReader.readBoolean();
-                        var tmpArray = arrayStack.pop();
-                        tmpArray.push(val);
-                        arrayStack.put(tmpArray);
+                        arrayStack.peek().push(val);
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
@@ -240,18 +272,14 @@ var JsonUtil = (function(){
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_OBJECT_VALUE)) {
                         var val = tokenReader.readNumber();
-                        var tmpObj = objStack.pop();
                         var key = stack.pop();
-                        tmpObj.key = val;
-                        objStack.put(tmpObj);
+                        objStack.peek().key = val;
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
                         continue;
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_ARRAY_VALUE)) {
                         var val = tokenReader.readNumber();
-                        var tmpArray = arrayStack.pop();
-                        tmpArray.push(val);
-                        arrayStack.put(tmpArray);
+                        arrayStack.peek().push(val);
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
@@ -271,18 +299,14 @@ var JsonUtil = (function(){
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_OBJECT_VALUE)) {
                         var val = tokenReader.readString();
-                        var tmpObj = objStack.pop();
                         var key = stack.pop();
-                        tmpObj.key = val;
-                        objStack.put(tmpObj);
+                        objStack.peek().key = val;
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
                         continue;
                     }
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_ARRAY_VALUE)) {
                         var val = tokenReader.readString();
-                        var tmpArray = arrayStack.pop();
-                        tmpArray.push(val);
-                        arrayStack.put(tmpArray);
+                        arrayStack.peek().push(val);
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
@@ -307,13 +331,32 @@ var JsonUtil = (function(){
                     throw new SyntaxError("Unexpected char '" + TOKEN_SEP_COMMA + "'");
                 case TOKEN_END_OBJECT:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_END_OBJECT)) {
-                        var tmpObj = objStack.pop();
-                        if (stack.length == 0) {
+                        if (scopeStack.length == 0) {
+                            var tmpObj = objStack.pop();
                             stack.push(tmpObj);
                             fsm.setStatus(fsm.STATUS_EXPECT_END_DOCUMENT);
                             continue;
                         }
-                        
+
+                        if (scopeStack.peek() == TOKEN_BEGIN_OBJECT) {
+                            scopeStack.pop();
+                        } else {
+                            throw new SyntaxError("Unexpected char '}', scope not match");
+                        }
+
+                        var lastScope = scopeStack.peek();
+                        if (lastScope == TOKEN_BEGIN_ARRAY) {
+                            var tmpObj = objStack.pop();
+                            arrayStack.peek().push(tmpObj);
+                            fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
+                        }
+                        if (lastScope == TOKEN_BEGIN_OBJECT) {
+                            var tmpObj = objStack.pop();
+                            var key = statck.pop();
+                            objStack.peek().key = tmpObj;
+                            fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
+                        }
+                        throw new SyntaxError("Unexpected char '}'");
                     }
                     throw new SyntaxError("Unexpected char '" + TOKEN_END_OBJECT + "'");
                 case TOKEN_END_ARRAY:
@@ -342,10 +385,8 @@ var JsonUtil = (function(){
     return {
         parse        : parse,
         toJson       : toJson,
-        parseNum     : parseNum,
-        parseStr     : parseStr,
-        parseLiteral : parseLiteral,
         charReader   : charReader,
-        tokenReader  : tokenReader
+//        tokenReader  : tokenReader,
+        simpleStack  : simpleStack
     };
 })();

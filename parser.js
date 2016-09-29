@@ -135,15 +135,94 @@ var JsonUtil = (function(){
             };
 
             reader.readNull = function() {
-                
+                var expected = "null";
+                for (var i = 0; i < expected.length; i++){
+                    var ch = charReader.next();
+                    if (ch != expected[i]) {
+                        throw new SyntaxError("parse error, unexpected char : '" + ch + "'");
+                    }
+                }
+                return null;
             };
 
             reader.readBoolean = function() {
-                
+                var expected = null;
+                var flag = charReader.peek();
+                if (flag == 't') {
+                    expected = "true";
+                } else {
+                    expected = "false";
+                }
+                for (var i = 0; i < expected.length; i++){
+                    var ch = charReader.next();
+                    if (ch != expected[i]) {
+                        throw new SyntaxError("parse error, unexpected char : '" + ch + "'");
+                    }
+                }
+                return flag == 't';
             };
 
             reader.readString = function() {
+                var ch = charReader.next();
+                if (ch != '"') {
+                    throw new SyntaxError("parse error, expected \" , " + ch + " received");
+                }
+                var ret = '';
+                while(true) {
+                    ch = charReader.next();
+                    if (ch == '\\') {
+                        // escape
+                        ech = charReader.next();
+                        switch (ech) {
+                            case '"':
+                                ret = ret + '\"';
+                                break;
+                            case '\\':
+                                ret = ret + '\\';
+                                break;
+                            case '/':
+                                ret = ret + '\/';
+                                break;
+                            case 'b':
+                                ret = ret + '\b';
+                                break;
+                            case 'f':
+                                ret = ret + '\f';
+                                break;
+                            case 'n':
+                                ret = ret + '\n';
+                                break;
+                            case 'r':
+                                ret = ret + '\r';
+                                break;
+                            case 't':
+                                ret = ret + '\t';
+                                break;
+                            case 'u':
+                                // unicode char
+                                var u = '';
+                                for (var i = 0; i < 4; i++) {
+                                    var uch = charReader.next();
+                                    if (uch < '0' || uch > 'F') {
+                                        throw new SyntaxError("parse error, unexpected char '" + uch + "'");
+                                    }
+                                    u = u + '' + uch;
+                                }
+
+                                ret = ret + String.fromCharCode(parseInt(u));
+                                break;
+                            default:
+                                throw new SyntaxError("parse error, unexpected char : '" + ech + "'");
+                        }
+                    } else if (ch == '"') {
+                        // end of string
+                        break;
+                    } else {
+                        ret = ret + '' + ch;
+                    }
+                }
                 
+                return ret;
             };
 
             reader.readNumber = function() {

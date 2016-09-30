@@ -92,6 +92,10 @@ var JsonUtil = (function(){
 
             reader.hasMore = function() {return pos < len;}
 
+            reader.readedIndex() = function() {return pos;}
+
+            reader.readed = function() {return originStr.substring(0, pos)}
+
             return reader;
         }
     };
@@ -100,6 +104,7 @@ var JsonUtil = (function(){
         createNew : function(str) {
             var reader = {};
             var charReader = charReader.createNew(str);
+            reader.charReader = charReader;
 
             reader.isWhiteSpace = function(ch) {
                 return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
@@ -144,7 +149,7 @@ var JsonUtil = (function(){
                 if ((ch >= '0' && ch <= '9') || ch == '-') {
                     return TOKEN_NUMBER;
                 }
-                throw new SyntaxError("parse error, unexpected token : '" + ch + "'");
+                throw new SyntaxError("parse error, unexpected token : '" + ch + "', index :" + charReader.readedIndex() + ", readed: " + charReader.readed());
             };
 
             reader.readNull = function() {
@@ -152,7 +157,7 @@ var JsonUtil = (function(){
                 for (var i = 0; i < expected.length; i++){
                     var ch = charReader.next();
                     if (ch != expected[i]) {
-                        throw new SyntaxError("parse error, unexpected char : '" + ch + "'");
+                        throw new SyntaxError("parse error, unexpected char : '" + ch + "', index :" + charReader.readedIndex() + ", readed: " + charReader.readed());
                     }
                 }
                 return null;
@@ -169,7 +174,7 @@ var JsonUtil = (function(){
                 for (var i = 0; i < expected.length; i++){
                     var ch = charReader.next();
                     if (ch != expected[i]) {
-                        throw new SyntaxError("parse error, unexpected char : '" + ch + "'");
+                        throw new SyntaxError("parse error, unexpected char : '" + ch + "', index :" + charReader.readedIndex() + ", readed: " + charReader.readed());
                     }
                 }
                 return flag == 't';
@@ -178,7 +183,7 @@ var JsonUtil = (function(){
             reader.readString = function() {
                 var ch = charReader.next();
                 if (ch != '"') {
-                    throw new SyntaxError("parse error, expected \" , " + ch + " received");
+                    throw new SyntaxError("parse error, expected \" , " + ch + " received, index :" + charReader.readedIndex() + ", readed: " + charReader.readed());
                 }
                 var ret = '';
                 while(true) {
@@ -217,7 +222,7 @@ var JsonUtil = (function(){
                                 for (var i = 0; i < 4; i++) {
                                     var uch = charReader.next();
                                     if (uch < '0' || uch > 'F') {
-                                        throw new SyntaxError("parse error, unexpected char '" + uch + "'");
+                                        throw new SyntaxError("parse error, unexpected char '" + uch + "', index :" + charReader.readedIndex() + ", readed: " + charReader.readed());
                                     }
                                     u = u + '' + uch;
                                 }
@@ -225,7 +230,7 @@ var JsonUtil = (function(){
                                 ret = ret + String.fromCharCode(parseInt(u));
                                 break;
                             default:
-                                throw new SyntaxError("parse error, unexpected char : '" + ech + "'");
+                                throw new SyntaxError("parse error, unexpected char : '" + ech + "', index :" + charReader.readedIndex() + ", readed: " + charReader.readed());
                         }
                     } else if (ch == '"') {
                         // end of string
@@ -239,7 +244,48 @@ var JsonUtil = (function(){
             };
 
             reader.readNumber = function() {
-                
+                var value;
+                var string = "";
+
+                var ch = charReader.next();
+                if (ch === '-') {
+                    string += '-';
+                    ch = charReader.next();
+                }
+
+                while (ch >= '0' && ch <= '9') {
+                    string += ch;
+                    ch = charReader.next();
+                }
+
+                if (ch === '.') {
+                    string += '.';
+                    ch = charReader.next();
+                    while (ch >= '0' && ch <= '9') {
+                        string += ch;
+                        ch = charReader.next();
+                    }
+                }
+
+                if (ch === 'e' || ch === 'E') {
+                    string += ch;
+                    ch = charReader.next();
+                    if (ch === '-' || ch === '+') {
+                        string += ch;
+                        ch = charReader.next();
+                    }
+                    while (ch >= '0' && ch <= '9') {
+                        string += ch;
+                        ch = charReader.next();
+                    }
+                }
+
+                value = new Number(string);
+                if (!isFinite(value)) {
+                    throw new SyntaxError("parse error, invalid number format: '" + string + "', index :" + charReader.readedIndex() + ", readed: " + charReader.readed());
+                }
+
+                return value;
             };
 
             return reader;
@@ -303,7 +349,7 @@ var JsonUtil = (function(){
                         scopeStack.push(TOKEN_BEGIN_OBJECT);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char '{'");
+                    throw new SyntaxError("Unexpected char '{', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_BEGIN_ARRAY:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_BEGIN_ARRAY)) {
                         var tmpArray = [];
@@ -312,7 +358,7 @@ var JsonUtil = (function(){
                         scopeStack.push(TOKEN_BEGIN_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char '['");
+                    throw new SyntaxError("Unexpected char '[', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_NULL:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SINGLE_VALUE)) {
                         var val = tokenReader.readNull();
@@ -333,7 +379,7 @@ var JsonUtil = (function(){
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected null");
+                    throw new SyntaxError("Unexpected null, index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_BOOLEAN:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SINGLE_VALUE)) {
                         var val = tokenReader.readBoolean();
@@ -354,7 +400,7 @@ var JsonUtil = (function(){
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected boolean");
+                    throw new SyntaxError("Unexpected boolean, index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_NUMBER:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SINGLE_VALUE)) {
                         var val = tokenReader.readNumber();
@@ -375,7 +421,7 @@ var JsonUtil = (function(){
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected number");
+                    throw new SyntaxError("Unexpected number, index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_STRING:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SINGLE_VALUE)) {
                         var val = tokenReader.readString();
@@ -402,13 +448,13 @@ var JsonUtil = (function(){
                         fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char '\"'");
+                    throw new SyntaxError("Unexpected char '\"', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_SEP_COLON:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SEP_COLON)) {
                         fsm.setStatus(fsm.STATUS_EXPECT_OBJECT_VALUE | fsm.STATUS_EXPECT_BEGIN_OBJECT | fsm.STATUS_EXPECT_BEGIN_ARRAY);
                         continue;
                     }
-                    throw new SyntaxError("Unexpected char ':'");
+                    throw new SyntaxError("Unexpected char ':', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_SEP_COMMA:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_SEP_COMMA)) {
                         if (fsm.hasStatus(fsm.STATUS_EXPECT_END_OBJECT)) {
@@ -420,7 +466,7 @@ var JsonUtil = (function(){
                             continue;
                         }
                     }
-                    throw new SyntaxError("Unexpected char ','");
+                    throw new SyntaxError("Unexpected char ',', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_END_OBJECT:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_END_OBJECT)) {
                         if (scopeStack.length == 0) {
@@ -433,7 +479,7 @@ var JsonUtil = (function(){
                         if (scopeStack.peek() == TOKEN_BEGIN_OBJECT) {
                             scopeStack.pop();
                         } else {
-                            throw new SyntaxError("Unexpected char '}', scope not match");
+                            throw new SyntaxError("Unexpected char '}', scope not match, index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                         }
 
                         var lastScope = scopeStack.peek();
@@ -448,9 +494,9 @@ var JsonUtil = (function(){
                             objStack.peek().key = tmpObj;
                             fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
                         }
-                        throw new SyntaxError("Unexpected char '}'");
+                        throw new SyntaxError("Unexpected char '}', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                     }
-                    throw new SyntaxError("Unexpected char '}'");
+                    throw new SyntaxError("Unexpected char '}', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_END_ARRAY:
                     if (fsm.hashStatus(fsm.STATUS_EXPECT_END_ARRAY)) {
                         if (scopeStack.length == 0) {
@@ -463,7 +509,7 @@ var JsonUtil = (function(){
                         if (scopeStack.peek() == TOKEN_BEGIN_ARRAY) {
                             scopeStack.pop();
                         } else {
-                            throw new SyntaxError("Unexpected char ']', scope not match");
+                            throw new SyntaxError("Unexpected char ']', scope not match, index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                         }
 
                         var lastScope = scopeStack.peek();
@@ -478,9 +524,9 @@ var JsonUtil = (function(){
                             objStack.peek().key = tmpArr;
                             fsm.setStatus(fsm.STATUS_EXPECT_COMMA | fsm.STATUS_EXPECT_END_OBJECT);
                         }
-                        throw new SyntaxError("Unexpected char ']'");
+                        throw new SyntaxError("Unexpected char ']', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                     }
-                    throw new SyntaxError("Unexpected char ']'");
+                    throw new SyntaxError("Unexpected char ']', index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
                 case TOKEN_END_DOCUMENT:
                     if (fsm.hasStatus(fsm.STATUS_EXPECT_END_DOCUMENT)) {
                         var val = stack.pop();
@@ -488,7 +534,7 @@ var JsonUtil = (function(){
                             return val;
                         }
                     }
-                    throw new SyntaxError("Unexpected EOF");
+                    throw new SyntaxError("Unexpected EOF, index :" + tokenReader.charReader.readedIndex() + ", readed: " + tokenReader.charReader.readed());
             }
         }
     };
@@ -502,8 +548,9 @@ var JsonUtil = (function(){
     return {
         parse        : parse,
         toJson       : toJson,
+// functions below are added for test
         charReader   : charReader,
-//        tokenReader  : tokenReader,
+        tokenReader  : tokenReader,
         simpleStack  : simpleStack
     };
 })();

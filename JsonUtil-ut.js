@@ -18,7 +18,7 @@ QUnit.test('simpleStack', function() {
 });
 
 QUnit.test('charReader', function() {
-    var str = '{"a":1,"b":FALSE}';
+    var str = '{"a":1,"b":false}';
     var ins1 = JsonUtil.charReader.createNew(str);
 
     var shortStr = 'null';
@@ -44,52 +44,39 @@ QUnit.test('charReader', function() {
 });
 
 //QUnit.test('tokenReader', function() {
-//    var str = '{"a":1,"b":FALSE}';
-//
+    //var str = '{"a":1,"b":false}';
+    //var ins1 = JsonUtil.tokenReader.createNew(str);
 //});
 
-// QUnit.test('parseNum', function(){
-//     QUnit.strictEqual(JsonUtil.parseNum('0'), 0);
-//     QUnit.strictEqual(JsonUtil.parseNum('22'), 22);
-//     QUnit.strictEqual(JsonUtil.parseNum('-21'), -21);
-//     QUnit.strictEqual(JsonUtil.parseNum('-102'), -102);
-//     QUnit.strictEqual(JsonUtil.parseNum('220'), 220);
+QUnit.test('parse', function() {
+    var str = '{"a":1,"b":false}';
+    var ret = JsonUtil.parse(str);
+    console.log(ret);
+    QUnit.strictEqual(ret['a'], 1);
+    QUnit.strictEqual(ret['b'], false);
 
-//     QUnit.strictEqual(JsonUtil.parseNum('022'), false);
-//     QUnit.strictEqual(JsonUtil.parseNum('-0'), false);
-//     QUnit.strictEqual(JsonUtil.parseNum('01'), false);
-//     QUnit.strictEqual(JsonUtil.parseNum('-01'), false);
-// });
+    var str = 'false';
+    var ret = JsonUtil.parse(str);
+    console.log(ret);
+    QUnit.strictEqual(ret, false);
 
+    var str = 'true';
+    var ret = JsonUtil.parse(str);
+    console.log(ret);
+    QUnit.strictEqual(ret, true);
 
-// QUnit.test('parseStr', function(){
-//     QUnit.strictEqual(JsonUtil.parseStr('""'), "");
-//     QUnit.strictEqual(JsonUtil.parseStr('"adf"'), "adf");
-//     QUnit.strictEqual(JsonUtil.parseStr('"你好"'), "你好");
-//     QUnit.strictEqual(JsonUtil.parseStr('"ad$^f"'), "ad$^f");
-//     QUnit.strictEqual(JsonUtil.parseStr('"22"'), "22");
-//     QUnit.strictEqual(JsonUtil.parseStr('"adb\"dd"'), "adb\"dd");
+    var str = 'null';
+    var ret = JsonUtil.parse(str);
+    console.log(ret);
+    QUnit.strictEqual(ret, null);
 
-//     QUnit.strictEqual(JsonUtil.parseStr('"a'), false);
-//     QUnit.strictEqual(JsonUtil.parseStr('abs'), false);
-//     QUnit.strictEqual(JsonUtil.parseStr('"adb"dd"'), false);
-//     QUnit.strictEqual(JsonUtil.parseStr('dsf"'), false);
-//     QUnit.strictEqual(JsonUtil.parseStr('3"1dsf"'), false);
-//     QUnit.strictEqual(JsonUtil.parseStr('"dsf"sas'), false);
-// });
+    var str = '[{"a":1,"b":-1.2e+3}, 1, "abc", null, false, true, [1,2,3], [[4,5,6],[7,8,9],010]]';
+    var ret = JsonUtil.parse(str);
+    console.log(ret);
+    QUnit.strictEqual(ret[0]['a'], 1);
+    QUnit.strictEqual(ret[2], "abc");
+    QUnit.strictEqual(ret[6][0], 1);
+    QUnit.strictEqual(ret[7][0][1], 5);
+    QUnit.strictEqual(ret[7][2], 10);
 
-
-// QUnit.test('parseLiteral', function(){
-//     QUnit.strictEqual(JsonUtil.parseLiteral('true'), true);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('false'), false);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('null'), null);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('TRUE'), true);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('FALSE'), false);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('NULL'), null);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('True'), true);
-
-//     QUnit.strictEqual(JsonUtil.parseLiteral('truea'), 1);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('123'), 1);
-//     QUnit.strictEqual(JsonUtil.parseLiteral(''), 1);
-//     QUnit.strictEqual(JsonUtil.parseLiteral('f"'), 1);
-// });
+});

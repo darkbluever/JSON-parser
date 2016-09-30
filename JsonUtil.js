@@ -1,3 +1,16 @@
+/*
+  JsonUtil.js
+
+  this file create function about json serialization and deserialization
+
+  this repo is a personal practice
+
+  reference:
+  http://www.json.org/
+  http://www.liaoxuefeng.com/article/0014211269349633dda29ee3f29413c91fa65c372585f23000
+  https://github.com/douglascrockford/JSON-js
+
+*/
 var JsonUtil = (function(){
 
     var TOKEN_BEGIN_OBJECT = 1;
